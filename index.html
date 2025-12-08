@@ -33,7 +33,7 @@
     }
     </script>
 </head>
-<body class="bg-[#fafafa] text-gray-800">
+<body class="bg-[#fff6ea] text-gray-800">
     <div id="root"></div>
 
     <script type="module">
@@ -119,7 +119,7 @@
         // --- COMPONENTES ---
 
         const Header = () => (
-            React.createElement("header", { className: "w-full bg-white shadow-sm py-4 px-6 flex justify-between items-center sticky top-0 z-50" },
+            React.createElement("header", { className: "w-full bg-[#fff6ea] bg-opacity-95 shadow-sm py-4 px-6 flex justify-between items-center sticky top-0 z-50 backdrop-blur-sm" },
                 React.createElement("div", { className: "flex items-center gap-3" },
                     React.createElement("img", { src: "isotiposamat.png", alt: "Sama Isotipo", className: "h-10 w-10 object-contain", onError: (e) => e.target.style.display = 'none' }),
                     React.createElement("div", null,
@@ -319,7 +319,7 @@
                 );
             };
 
-            return React.createElement("div", { className: "min-h-screen bg-[#fafafa] font-sans" },
+            return React.createElement("div", { className: "min-h-screen bg-[#fff6ea] font-sans" },
                 React.createElement(Header),
                 React.createElement("main", { className: "container mx-auto pb-20 pt-6" },
                     step === 'landing' && React.createElement(LandingView),
