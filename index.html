@@ -1,0 +1,520 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { MoveRight, CheckCircle2, Leaf, Flame, Wind, Mail, ArrowRight, Loader2, Info } from 'lucide-react';
+
+// --- CONFIGURACIÓN DE FIREBASE ---
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+// --- DATOS DEL TEST (Extraídos del PDF) ---
+const questionsData = {
+  vata: [
+    "Realizo mis actividades muy deprisa",
+    "No se me da bien memorizar cosas ni recordar las más adelante",
+    "Soy entusiasta y vivaz por naturaleza",
+    "Tengo una figura delgada, no aumento de peso con facilidad",
+    "Siempre he aprendido cosas nuevas con facilidad",
+    "Mis andares característicos son ligeros y rápidos",
+    "Me cuesta tomar decisiones",
+    "Tiendo a tener gases y estreñimiento",
+    "Suelo tener las manos y los pies fríos",
+    "Me pongo ansioso o me preocupo frecuentemente",
+    "No tolero el frío tanto como la mayoría",
+    "Hablo muy deprisa, y mis amigos me consideran una persona parlanchina",
+    "Cambio de humor con facilidad y tengo una naturaleza emotiva",
+    "Me cuesta conciliar el sueño o dormir de un tirón toda la noche",
+    "Tengo la piel muy seca, especialmente en invierno",
+    "Mi mente es muy activa, a veces inquieta, pero también muy imaginativa",
+    "Mis movimientos son rápidos y enérgicos: tengo arranques de actividad",
+    "Me exalto con facilidad",
+    "Si de mí depende, mis hábitos de alimentación y descanso son irregulares",
+    "Olvido con la misma rapidez con que aprendo"
+  ],
+  pitta: [
+    "Me considero muy eficiente",
+    "Soy sumamente preciso y ordenado en mis actividades",
+    "Soy una persona decidida y de carácter fuerte",
+    "El calor me provoca más incomodidad o fatiga que a la mayoría",
+    "Tiendo a transpirar con facilidad",
+    "Aunque no siempre lo demuestre, me irrito o me enfado con facilidad",
+    "Saltarme una comida o no tomarla a su hora, me provoca malestar",
+    "Mi cabello es prematuramente cano, lacio, rubio, rojizo o fino",
+    "Tengo un buen apetito, si lo deseo puedo comer en gran cantidad",
+    "Mucha gente me considera una persona obstinada",
+    "El intestino me funciona con gran regularidad (más común diarrea que estreñimiento)",
+    "Me impaciento con mucha facilidad",
+    "Tiendo a ser perfeccionista respecto a los detalles",
+    "Me enfado con bastante facilidad, pero el enfado se me pasa enseguida",
+    "Me gustan mucho los alimentos fríos y las bebidas heladas",
+    "Noto con mayor facilidad si hace mucho calor en una habitación",
+    "No tolero los alimentos demasiado picantes o condimentados",
+    "No soy muy tolerante con quienes disienten conmigo",
+    "Me gustan los desafíos y cuando me fijo una meta no cejo hasta alcanzarla",
+    "Tiendo a ser crítico con los demás y con mi persona"
+  ],
+  kapha: [
+    "Mi tendencia natural es hacer mis tareas de manera lenta y relajada",
+    "Aumento de peso con más facilidad que la mayoría y me cuesta más adelgazar",
+    "Tengo un temperamento plácido y sereno, no me altero con facilidad",
+    "Puedo saltarme comidas sin sufrir malestares significativos",
+    "Tiendo a producir un exceso de mucosidad, flemas o congestión",
+    "Necesito dormir como mínimo ocho horas para estar bien al día siguiente",
+    "Tengo un sueño muy profundo",
+    "Soy de naturaleza tranquila y no me enfado con facilidad",
+    "No aprendo tan rápido, pero tengo excelente retentiva y memoria",
+    "Tiendo a engordar y acumular grasa",
+    "Me molesta el tiempo fresco y húmedo",
+    "Tengo el cabello grueso, abundante, oscuro y ondulado",
+    "Tengo la piel suave y la tez algo pálida",
+    "Soy una persona corpulenta y de constitución sólida",
+    "Soy una persona serena, dulce, afectuosa y perdono con facilidad",
+    "Soy de digestión lenta, siento pesadez después de comer",
+    "Tengo mucho aguante y resistencia física, y un nivel de energía estable",
+    "Camino con paso lento y acompasado",
+    "Tiendo a dormir demasiado y me cuesta ponerme en marcha por la mañana",
+    "Como con lentitud, soy lento y metódico en mis actos"
+  ]
+};
+
+// --- COMPONENTES UI ---
+
+const Header = () => (
+  <header className="w-full bg-white shadow-sm py-4 px-6 flex justify-between items-center sticky top-0 z-50">
+    <div className="flex items-center gap-3">
+      <img src="isotiposamat.png" alt="Sama Isotipo" className="h-10 w-10 object-contain" onError={(e) => e.target.style.display = 'none'} />
+      <div>
+        <h1 className="text-xl font-bold text-[#b1c52b] leading-none">sama</h1>
+        <p className="text-[10px] tracking-widest text-gray-500 uppercase">Espacio de Equilibrio</p>
+      </div>
+    </div>
+    <div className="hidden md:block text-sm text-[#fdd17c] font-semibold">
+      TEST DE BIO-TIPO (PRAKRITI)
+    </div>
+  </header>
+);
+
+const ProgressBar = ({ current, total }) => {
+  const progress = Math.min(100, (current / total) * 100);
+  return (
+    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-6">
+      <div 
+        className="h-full bg-[#b1c52b] transition-all duration-500 ease-out"
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+  );
+};
+
+const QuestionCard = ({ text, value, onChange, index }) => (
+  <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 mb-4 hover:border-[#fdd17c] transition-colors">
+    <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+      <p className="text-gray-700 font-medium text-lg flex-1">
+        <span className="text-[#b1c52b] font-bold mr-2">{index + 1}.</span>
+        {text}
+      </p>
+      
+      <div className="w-full md:w-auto flex flex-col items-center gap-2">
+        <div className="flex gap-1">
+           {[0, 1, 2, 3, 4, 5, 6].map((score) => (
+             <button
+              key={score}
+              onClick={() => onChange(score)}
+              className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all
+                ${value === score 
+                  ? 'bg-[#b1c52b] text-white scale-110 shadow-md' 
+                  : 'bg-gray-100 text-gray-400 hover:bg-[#fdd17c] hover:text-white'
+                }`}
+             >
+               {score}
+             </button>
+           ))}
+        </div>
+        <div className="flex justify-between w-full text-[10px] text-gray-400 uppercase tracking-wider px-1">
+          <span>No aplica</span>
+          <span>Muy cierto</span>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// --- COMPONENTE PRINCIPAL ---
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [step, setStep] = useState('landing'); // landing, vata, pitta, kapha, email, results
+  const [scores, setScores] = useState({ vata: {}, pitta: {}, kapha: {} });
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [results, setResults] = useState(null);
+
+  // Autenticación anónima para base de datos
+  useEffect(() => {
+    const initAuth = async () => {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInAnonymously(auth); // Fallback safe
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (e) {
+            console.error("Auth error", e);
+        }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  const handleScoreChange = (section, index, value) => {
+    setScores(prev => ({
+      ...prev,
+      [section]: { ...prev[section], [index]: value }
+    }));
+  };
+
+  const calculateTotal = (section) => {
+    return Object.values(scores[section]).reduce((a, b) => a + b, 0);
+  };
+
+  const isSectionComplete = (section) => {
+    return Object.keys(scores[section]).length === questionsData[section].length;
+  };
+
+  const getDominantDosha = (totals) => {
+    const { vata, pitta, kapha } = totals;
+    const max = Math.max(vata, pitta, kapha);
+    const dominants = [];
+    if (vata === max) dominants.push('Vata');
+    if (pitta === max) dominants.push('Pitta');
+    if (kapha === max) dominants.push('Kapha');
+    
+    // Lógica del PDF: Diferencia considerable vs Parejo
+    if (dominants.length === 3) return { type: 'Tridosha', desc: 'Equilibrio entre los tres', main: 'Vata-Pitta-Kapha' };
+    if (dominants.length === 2) return { type: 'Bidosha', desc: `Predominio dual de ${dominants.join(' y ')}`, main: dominants.join('-') };
+    
+    // Verificar si es "Puro" (diferencia considerable, asumimos > 15 puntos por ejemplo, o simplemente el máximo)
+    return { type: 'Puro', desc: `Predominio claro de ${dominants[0]}`, main: dominants[0] };
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email || !user) return;
+    
+    setIsSubmitting(true);
+    
+    const totals = {
+      vata: calculateTotal('vata'),
+      pitta: calculateTotal('pitta'),
+      kapha: calculateTotal('kapha')
+    };
+
+    const finalResult = getDominantDosha(totals);
+    setResults({ totals, finalResult });
+
+    try {
+      // Guardar en Firestore
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'leads_dosha'), {
+        email: email,
+        totals: totals,
+        resultType: finalResult.main,
+        detailScores: scores,
+        createdAt: serverTimestamp(),
+        userId: user.uid
+      });
+      
+      setStep('results');
+    } catch (error) {
+      console.error("Error saving lead:", error);
+      alert("Hubo un error guardando tus resultados. Por favor intenta de nuevo.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- VISTAS ---
+
+  const LandingView = () => (
+    <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4 max-w-2xl mx-auto animate-fade-in">
+      <div className="mb-8 relative">
+        <div className="absolute inset-0 bg-[#fdd17c] blur-3xl opacity-20 rounded-full"></div>
+        <img src="isotiposamat.png" alt="Sama" className="w-32 h-32 relative z-10 animate-float" onError={(e) => e.target.style.display = 'none'} />
+        {/* Fallback Icon if image fails */}
+        <div className="w-32 h-32 rounded-full border-4 border-[#b1c52b] flex items-center justify-center relative z-0">
+             <Leaf className="text-[#b1c52b] w-16 h-16" />
+        </div>
+      </div>
+      
+      <h2 className="text-4xl font-bold text-gray-800 mb-4">Descubre tu Biotipo <span className="text-[#b1c52b]">Ayurveda</span></h2>
+      <p className="text-gray-600 text-lg mb-8 leading-relaxed">
+        El Ayurveda reconoce tres fuerzas primarias o <strong>Doshas</strong> (Vata, Pitta, Kapha). 
+        Conocer tu constitución única es el primer paso hacia el equilibrio y la salud integral.
+        Responde este test honestamente para descubrir tu naturaleza.
+      </p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mb-10">
+        <div className="bg-white p-4 rounded-lg shadow-sm border-t-4 border-blue-400">
+          <Wind className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+          <h3 className="font-bold text-gray-700">Vata</h3>
+          <p className="text-xs text-gray-500">Aire y Éter</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border-t-4 border-red-400">
+          <Flame className="w-8 h-8 text-red-400 mx-auto mb-2" />
+          <h3 className="font-bold text-gray-700">Pitta</h3>
+          <p className="text-xs text-gray-500">Fuego y Agua</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border-t-4 border-green-600">
+          <Leaf className="w-8 h-8 text-green-600 mx-auto mb-2" />
+          <h3 className="font-bold text-gray-700">Kapha</h3>
+          <p className="text-xs text-gray-500">Tierra y Agua</p>
+        </div>
+      </div>
+
+      <button 
+        onClick={() => setStep('vata')}
+        className="bg-[#b1c52b] text-white px-8 py-4 rounded-full text-xl font-bold shadow-lg hover:bg-[#9db025] hover:shadow-xl transition-all transform hover:-translate-y-1 flex items-center gap-2"
+      >
+        Comenzar Test <ArrowRight className="w-5 h-5" />
+      </button>
+      <p className="mt-4 text-xs text-gray-400">Tomará aproximadamente 5 minutos</p>
+    </div>
+  );
+
+  const SectionView = ({ dosha, title, icon: Icon, colorClass, nextStep }) => {
+    const isComplete = isSectionComplete(dosha);
+    const currentScore = calculateTotal(dosha);
+    
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8 animate-fade-in">
+        <div className="mb-8 flex items-center gap-4">
+          <div className={`p-3 rounded-full ${colorClass} bg-opacity-20`}>
+            <Icon className={`w-8 h-8 ${colorClass.replace('bg-', 'text-')}`} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Sección {title}</h2>
+            <p className="text-sm text-gray-500">Califica del 0 (No aplica) al 6 (Totalmente yo)</p>
+          </div>
+        </div>
+
+        <ProgressBar current={Object.keys(scores[dosha]).length} total={20} />
+
+        <div className="space-y-4">
+          {questionsData[dosha].map((q, idx) => (
+            <QuestionCard 
+              key={idx} 
+              index={idx}
+              text={q} 
+              value={scores[dosha][idx]} 
+              onChange={(val) => handleScoreChange(dosha, idx, val)}
+            />
+          ))}
+        </div>
+
+        <div className="mt-8 flex justify-end">
+          <button
+            onClick={() => {
+              if (isComplete) {
+                window.scrollTo(0,0);
+                setStep(nextStep);
+              }
+            }}
+            disabled={!isComplete}
+            className={`
+              px-8 py-3 rounded-full font-bold text-lg flex items-center gap-2 transition-all
+              ${isComplete 
+                ? 'bg-[#b1c52b] text-white shadow-lg hover:bg-[#9db025] cursor-pointer' 
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
+            `}
+          >
+            {nextStep === 'email' ? 'Finalizar y Ver Resultados' : 'Siguiente Sección'}
+            {nextStep === 'email' ? <CheckCircle2 className="w-5 h-5" /> : <MoveRight className="w-5 h-5" />}
+          </button>
+        </div>
+        {!isComplete && (
+          <p className="text-center text-red-400 text-sm mt-4">
+            Por favor responde todas las preguntas para continuar.
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  const EmailView = () => (
+    <div className="max-w-md mx-auto px-4 py-12 text-center animate-fade-in">
+      <div className="bg-white p-8 rounded-2xl shadow-xl border-t-8 border-[#fdd17c]">
+        <div className="mb-6 bg-[#fdd17c] bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+           <Mail className="w-8 h-8 text-[#d4a01c]" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Tu resultado está listo!</h2>
+        <p className="text-gray-600 mb-6">
+          Hemos calculado tu constitución ayurvédica. Ingresa tu correo electrónico para recibir tu análisis detallado y consejos personalizados de <strong>Sama</strong>.
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <input
+              type="email"
+              required
+              placeholder="tu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fdd17c] focus:border-transparent outline-none transition-all"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-[#b1c52b] text-white py-3 rounded-lg font-bold hover:bg-[#9db025] transition-colors flex justify-center items-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" /> Procesando...
+              </>
+            ) : (
+              'Descubrir mi Dosha'
+            )}
+          </button>
+        </form>
+        <p className="text-xs text-gray-400 mt-4">
+          Tus datos están seguros. Te enviaremos información relevante sobre Ayurveda y bienestar.
+        </p>
+      </div>
+    </div>
+  );
+
+  const ResultView = () => {
+    if (!results) return null;
+    const { totals, finalResult } = results;
+    const maxScore = Math.max(totals.vata, totals.pitta, totals.kapha, 1); // Avoid div by 0
+
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
+          <div className="bg-[#b1c52b] p-8 text-white text-center">
+            <h2 className="text-lg font-medium opacity-90 mb-2">Tu Prakriti (Biotipo) predominante es:</h2>
+            <h1 className="text-5xl font-bold mb-4">{finalResult.main}</h1>
+            <p className="text-xl opacity-90">{finalResult.desc}</p>
+          </div>
+          
+          <div className="p-8">
+            <h3 className="text-xl font-bold text-gray-700 mb-6 text-center">Detalle de tus Energías</h3>
+            
+            <div className="space-y-6">
+              {/* Vata Bar */}
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-bold text-blue-500">Vata (Aire)</span>
+                  <span className="text-gray-600 font-mono">{totals.vata} pts</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-4">
+                  <div className="bg-blue-400 h-4 rounded-full transition-all duration-1000" style={{ width: `${(totals.vata / maxScore) * 100}%` }}></div>
+                </div>
+              </div>
+
+              {/* Pitta Bar */}
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-bold text-red-500">Pitta (Fuego)</span>
+                  <span className="text-gray-600 font-mono">{totals.pitta} pts</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-4">
+                  <div className="bg-red-400 h-4 rounded-full transition-all duration-1000" style={{ width: `${(totals.pitta / maxScore) * 100}%` }}></div>
+                </div>
+              </div>
+
+              {/* Kapha Bar */}
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-bold text-green-600">Kapha (Tierra)</span>
+                  <span className="text-gray-600 font-mono">{totals.kapha} pts</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-4">
+                  <div className="bg-green-600 h-4 rounded-full transition-all duration-1000" style={{ width: `${(totals.kapha / maxScore) * 100}%` }}></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-10 bg-[#fdd17c] bg-opacity-10 p-6 rounded-xl border border-[#fdd17c]">
+              <div className="flex gap-4 items-start">
+                <Info className="w-6 h-6 text-[#d4a01c] flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-2">¿Qué significa esto?</h4>
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    Según el Ayurveda, tu Dosha predominante define tu constitución física, mental y emocional. 
+                    Mantener este equilibrio es clave para tu salud. Hemos enviado este reporte a <strong>{email}</strong> junto con recomendaciones iniciales para tu tipo {finalResult.main}.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+             <div className="mt-8 text-center">
+                <button onClick={() => window.location.reload()} className="text-gray-400 underline hover:text-[#b1c52b] text-sm">
+                    Realizar el test nuevamente
+                </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[#fafafa] font-sans selection:bg-[#fdd17c] selection:text-gray-900">
+      <Header />
+      <main className="container mx-auto pb-20 pt-6">
+        {step === 'landing' && <LandingView />}
+        {step === 'vata' && (
+          <SectionView 
+            dosha="vata" 
+            title="Vata" 
+            icon={Wind} 
+            colorClass="text-blue-400" 
+            nextStep="pitta" 
+          />
+        )}
+        {step === 'pitta' && (
+          <SectionView 
+            dosha="pitta" 
+            title="Pitta" 
+            icon={Flame} 
+            colorClass="text-red-400" 
+            nextStep="kapha" 
+          />
+        )}
+        {step === 'kapha' && (
+          <SectionView 
+            dosha="kapha" 
+            title="Kapha" 
+            icon={Leaf} 
+            colorClass="text-green-600" 
+            nextStep="email" 
+          />
+        )}
+        {step === 'email' && <EmailView />}
+        {step === 'results' && <ResultView />}
+      </main>
+      
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
