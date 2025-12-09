@@ -84,15 +84,35 @@ import { getFirestore, collection, getDocs } from "https://www.gstatic.com/fireb
                     return;
                 }
 
-                // 2. Convertimos a CSV
-                const csvContent = convertirACSV(listaPacientes);
+               // Función para convertir datos JSON a CSV (formato Excel)
+        function convertirACSV(arrayDeDatos) {
+            if (arrayDeDatos.length === 0) return '';
+            
+            // 1. DEFINIMOS TU LISTA VIP (Aquí eliges las columnas)
+            // Asegúrate de que los nombres sean IGUALES a como aparecen en tu base de datos
+            const columnasDeseadas = ["email", "resultType"]; 
+
+            // Creamos la primera fila con los títulos
+            const filas = [columnasDeseadas.join(',')]; 
+
+            // 2. Recorremos cada paciente y sacamos SOLO lo que pediste
+            arrayDeDatos.forEach(obj => {
+                const valores = columnasDeseadas.map(columna => {
+                    let valor = obj[columna] || ''; // Si está vacío, poner nada
+                    return `"${valor}"`; // Ponemos comillas por seguridad
+                });
+                filas.push(valores.join(','));
+            });
+
+            return filas.join('\n'); // Unimos todo
+        }
 
                 // 3. Crear un enlace invisible para descargar el archivo
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.setAttribute("href", url);
-                link.setAttribute("download", "reporte_sama_sana.csv");
+                link.setAttribute("download", "bd_test_biotipo.csv");
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
