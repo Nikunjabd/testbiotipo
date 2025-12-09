@@ -24,8 +24,9 @@
 
     <script type="module">
         // Importamos las herramientas necesarias
-        import { initializeApp } from 'firebase/app';
-        import { getFirestore, collection, getDocs } from 'firebase/firestore';
+    // Usamos direcciones web completas (CDN) para que funcione sin instalación
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // --- ⚠️ PEGA AQUÍ TU MISMA CONFIGURACIÓN (La del index.html) ⚠️ ---
          const firebaseConfig = {
