@@ -45,33 +45,35 @@
         import { MoveRight, CheckCircle2, Leaf, Flame, Wind, Mail, ArrowRight, Loader2, Info } from 'lucide-react';
 
         // --- ⚠️ TU CONFIGURACIÓN DE FIREBASE AQUÍ ⚠️ ---
-        // 1. Ve a console.firebase.google.com
-        // 2. Crea un proyecto > Agrega una app web (</>)
-        // 3. Copia el objeto 'firebaseConfig' y pégalo abajo reemplazando el existente.
-        
-         const firebaseConfig = {
-  apiKey: "AIzaSyBNKkuplVI9rVEN9XbgjpLS_O-kncfCFyA",
-  authDomain: "testbiotipo.firebaseapp.com",
-  projectId: "testbiotipo",
-  storageBucket: "testbiotipo.firebasestorage.app",
-  messagingSenderId: "317910027014",
-  appId: "1:317910027014:web:1e3429835bc7f1562b6c87",
-  measurementId: "G-QLVSK0YQY7"
-};
+        const firebaseConfig = {
+            // Asegúrate de pegar tu clave API nueva aquí, reemplazando TODO el placeholder.
+            apiKey: "AIzaSyBNKkuplVI9rVEN9XbgjpLS_O-kncfCFyA", 
+            authDomain: "testbiotipo.firebaseapp.com",
+            projectId: "testbiotipo",
+            storageBucket: "testbiotipo.firebasestorage.app",
+            messagingSenderId: "317910027014",
+            appId: "1:317910027014:web:1e3429835bc7f1562b6c87"
+        };
 
         // Inicialización segura de Firebase
         let app, auth, db;
         let isFirebaseReady = false;
 
         try {
-            if (firebaseConfig.apiKey !== "TU_API_KEY_AQUI") {
+            // Revisión de la API Key:
+            // 1. Debe existir.
+            // 2. NO debe contener el texto genérico de ejemplo ("PEGA_AQUÍ" o "TU_API_KEY").
+            const placeholderKeys = ["PEGA_AQUÍ", "TU_API_KEY", "123456789"]; 
+            const isPlaceholder = placeholderKeys.some(key => firebaseConfig.apiKey.includes(key));
+            
+            if (firebaseConfig.apiKey && !isPlaceholder) {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
                 isFirebaseReady = true;
-                console.log("Firebase conectado correctamente.");
+                console.log("Firebase conectado correctamente con la nueva clave.");
             } else {
-                console.warn("Firebase no está configurado. El test funcionará en modo DEMO (no guardará datos).");
+                console.warn("Firebase no está configurado o usa la clave de ejemplo. El test funcionará en modo DEMO.");
             }
         } catch (error) {
             console.error("Error inicializando Firebase:", error);
@@ -101,7 +103,7 @@
                 "Tiendo a ser perfeccionista respecto a los detalles", "Me enfado con bastante facilidad, pero el enfado se me pasa enseguida",
                 "Me gustan mucho los alimentos fríos y las bebidas heladas", "Noto con mayor facilidad si hace mucho calor en una habitación",
                 "No tolero los alimentos demasiado picantes o condimentados", "No soy muy tolerante con quienes disienten conmigo",
-                "Me gustan los desafíos y cuando me fijo una meta no cedo hasta alcanzarla", "Tiendo a ser crítico con los demás y con mi persona"
+                "Me gustan los desafíos y cuando me fijo una meta no cejo hasta alcanzarla", "Tiendo a ser crítico con los demás y con mi persona"
             ],
             kapha: [
                 "Mi tendencia natural es hacer mis tareas de manera lenta y relajada", "Aumento de peso con más facilidad que la mayoría y me cuesta más adelgazar",
@@ -117,24 +119,24 @@
             ]
         };
 
-        // --- COMPONENTES ---
+        // --- COMPONENTES GLOBALES ---
 
         const Header = () => (
             React.createElement("header", { className: "w-full bg-[#fff6ea] bg-opacity-95 shadow-sm py-4 px-6 flex justify-between items-center sticky top-0 z-50 backdrop-blur-sm" },
                 React.createElement("div", { className: "flex items-center gap-3" },
                     React.createElement("img", { src: "isotiposamat.png", alt: "Sama Isotipo", className: "h-10 w-10 object-contain", onError: (e) => e.target.style.display = 'none' }),
                     React.createElement("div", null,
-                        React.createElement("h1", { className: "text-xl font-bold text-[#fdd17c] leading-none" }, "sama"),
-                        React.createElement("p", { className: "text-[10px] tracking-widest text-gray-500 uppercase" }, "Medicina de Equilibrio")
+                        React.createElement("h1", { className: "text-xl font-bold text-[#b1c52b] leading-none" }, "sama"),
+                        React.createElement("p", { className: "text-[10px] tracking-widest text-gray-500 uppercase" }, "Espacio de Equilibrio")
                     )
                 ),
-                React.createElement("div", { className: "hidden md:block text-sm text-[#fdd17c] font-semibold" }, "TEST DE BIOTIPO (PRAKRITI)")
+                React.createElement("div", { className: "hidden md:block text-sm text-[#fdd17c] font-semibold" }, "TEST DE BIO-TIPO (PRAKRITI)")
             )
         );
 
         const ProgressBar = ({ current, total }) => {
             const progress = Math.min(100, (current / total) * 100);
-            return React.createElement("div", { className: "w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-6" },
+            return React.createElement("div", { className: "w-full h-2 bg-gray-200 bg-opacity-50 rounded-full overflow-hidden mb-6" },
                 React.createElement("div", { className: "h-full bg-[#b1c52b] transition-all duration-500 ease-out", style: { width: `${progress}%` } })
             );
         };
@@ -165,13 +167,22 @@
             )
         );
 
- // --- VISTAS (Movidas fuera de App para arreglar el bug de foco) ---
+        // --- VISTAS (Fuera de App para evitar errores de renderizado) ---
 
         const LandingView = ({ onStart }) => (
             React.createElement("div", { className: "flex flex-col items-center justify-center min-h-[80vh] text-center px-4 max-w-2xl mx-auto animate-fade-in" },
                 React.createElement("div", { className: "mb-8 relative" },
                     React.createElement("div", { className: "absolute inset-0 bg-[#fdd17c] blur-3xl opacity-20 rounded-full" }),
-                    React.createElement("img", { src: "isotiposamat.png", alt: "Sama", className: "w-32 h-32 relative z-10 animate-float", onError: (e) => { e.target.style.display='none'; document.getElementById('fallback-icon').style.display='flex'; } }),
+                    React.createElement("img", { 
+                        src: "isotiposamat.png", 
+                        alt: "Sama", 
+                        className: "w-32 h-32 relative z-10 animate-float", 
+                        onError: (e) => { 
+                            e.target.style.display='none'; 
+                            const fallback = document.getElementById('fallback-icon');
+                            if(fallback) fallback.style.display='flex'; 
+                        } 
+                    }),
                     React.createElement("div", { id: "fallback-icon", className: "w-32 h-32 rounded-full border-4 border-[#b1c52b] flex items-center justify-center relative z-0", style: { display: 'none' } },
                         React.createElement(Leaf, { className: "text-[#b1c52b] w-16 h-16" })
                     )
@@ -251,7 +262,7 @@
                     ),
                     React.createElement("div", { className: "p-8 space-y-6" },
                         React.createElement(Bar, { label: "Vata (Aire)", score: totals.vata, color: "text-blue-500", bg: "bg-blue-400" }),
-                        React.createElement(Bar, { label: "Pitta (Fuego)", score: totals.pitta, color: "text-red-500", bg: "bg-red-400" }),
+                        React.createElement(Bar, { label: "Pitta (Fuego)", score: totals.pitta, color: "text-orange-500", bg: "bg-orange-400" }),
                         React.createElement(Bar, { label: "Kapha (Tierra)", score: totals.kapha, color: "text-green-600", bg: "bg-green-600" }),
                         React.createElement("div", { className: "mt-8 text-center" },
                             React.createElement("button", { onClick: () => window.location.reload(), className: "text-gray-400 underline hover:text-[#b1c52b] text-sm" }, "Realizar test nuevamente")
@@ -287,8 +298,11 @@
 
             const calculateTotal = (section) => Object.values(scores[section]).reduce((a, b) => a + b, 0);
 
-                // NUEVA LÓGICA: Tolerancia de 20 puntos
-                // Ajustado para ser más preciso: solo si está a 20 puntos o menos del líder se considera biotipo mixto.
+            const getDominantDosha = (totals) => {
+                const { vata, pitta, kapha } = totals;
+                const max = Math.max(vata, pitta, kapha);
+                
+                // LÓGICA: Tolerancia de 20 puntos para biotipos mixtos
                 const threshold = 20;
                 const dominants = [];
 
@@ -341,7 +355,7 @@
                         scores, onScoreChange: handleScoreChange, onNext: handleNext
                     }),
                     step === 'pitta' && React.createElement(SectionView, { 
-                        dosha: "pitta", title: "Pitta", icon: Flame, colorClass: "text-red-400", nextStep: "kapha",
+                        dosha: "pitta", title: "Pitta", icon: Flame, colorClass: "text-orange-400", nextStep: "kapha",
                         scores, onScoreChange: handleScoreChange, onNext: handleNext
                     }),
                     step === 'kapha' && React.createElement(SectionView, { 
