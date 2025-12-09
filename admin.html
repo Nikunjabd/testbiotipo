@@ -28,12 +28,15 @@
         import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
         // --- ⚠️ PEGA AQUÍ TU MISMA CONFIGURACIÓN (La del index.html) ⚠️ ---
-        const firebaseConfig = {
-            // ... copia y pega aquí lo que tienes en tu index.html ...
-            // apiKey: "...",
-            // authDomain: "...",
-            // ...
-        };
+         const firebaseConfig = {
+  apiKey: "AIzaSyCFPFlpRmBcXxjNWPUuc2MKEe19Jx3qNC0",
+  authDomain: "testbiotipo.firebaseapp.com",
+  projectId: "testbiotipo",
+  storageBucket: "testbiotipo.firebasestorage.app",
+  messagingSenderId: "317910027014",
+  appId: "1:317910027014:web:1e3429835bc7f1562b6c87",
+  measurementId: "G-QLVSK0YQY7"
+};
 
         // Iniciamos Firebase
         const app = initializeApp(firebaseConfig);
