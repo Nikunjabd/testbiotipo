@@ -165,6 +165,102 @@
             )
         );
 
+ // --- VISTAS (Movidas fuera de App para arreglar el bug de foco) ---
+
+        const LandingView = ({ onStart }) => (
+            React.createElement("div", { className: "flex flex-col items-center justify-center min-h-[80vh] text-center px-4 max-w-2xl mx-auto animate-fade-in" },
+                React.createElement("div", { className: "mb-8 relative" },
+                    React.createElement("div", { className: "absolute inset-0 bg-[#fdd17c] blur-3xl opacity-20 rounded-full" }),
+                    React.createElement("img", { src: "isotiposamat.png", alt: "Sama", className: "w-32 h-32 relative z-10 animate-float", onError: (e) => { e.target.style.display='none'; document.getElementById('fallback-icon').style.display='flex'; } }),
+                    React.createElement("div", { id: "fallback-icon", className: "w-32 h-32 rounded-full border-4 border-[#b1c52b] flex items-center justify-center relative z-0", style: { display: 'none' } },
+                        React.createElement(Leaf, { className: "text-[#b1c52b] w-16 h-16" })
+                    )
+                ),
+                React.createElement("h2", { className: "text-4xl font-bold text-gray-800 mb-4" }, "Descubre tu Biotipo ", React.createElement("span", { className: "text-[#b1c52b]" }, "Ayurveda")),
+                React.createElement("p", { className: "text-gray-600 text-lg mb-8 leading-relaxed" }, "El Ayurveda reconoce tres fuerzas primarias o Doshas (Vata, Pitta, Kapha). Responde este test honestamente para descubrir tu naturaleza."),
+                React.createElement("button", {
+                    onClick: onStart,
+                    className: "bg-[#b1c52b] text-white px-8 py-4 rounded-full text-xl font-bold shadow-lg hover:bg-[#9db025] hover:shadow-xl transition-all transform hover:-translate-y-1 flex items-center gap-2"
+                }, "Comenzar Test", React.createElement(ArrowRight, { className: "w-5 h-5" }))
+            )
+        );
+
+        const SectionView = ({ dosha, title, icon: Icon, colorClass, nextStep, scores, onScoreChange, onNext }) => {
+            const currentScores = scores[dosha];
+            const isComplete = Object.keys(currentScores).length === questionsData[dosha].length;
+            
+            return React.createElement("div", { className: "max-w-3xl mx-auto px-4 py-8 animate-fade-in" },
+                React.createElement("div", { className: "mb-8 flex items-center gap-4" },
+                    React.createElement("div", { className: `p-3 rounded-full ${colorClass} bg-opacity-20` }, React.createElement(Icon, { className: `w-8 h-8 ${colorClass.replace('bg-', 'text-')}` })),
+                    React.createElement("div", null, React.createElement("h2", { className: "text-2xl font-bold text-gray-800" }, `Sección ${title}`), React.createElement("p", { className: "text-sm text-gray-500" }, "Califica del 0 al 6"))
+                ),
+                React.createElement(ProgressBar, { current: Object.keys(currentScores).length, total: 20 }),
+                React.createElement("div", { className: "space-y-4" },
+                    questionsData[dosha].map((q, idx) => React.createElement(QuestionCard, { key: idx, index: idx, text: q, value: currentScores[idx], onChange: (val) => onScoreChange(dosha, idx, val) }))
+                ),
+                React.createElement("div", { className: "mt-8 flex justify-end" },
+                    React.createElement("button", {
+                        onClick: () => { if (isComplete) { window.scrollTo(0,0); onNext(nextStep); } },
+                        disabled: !isComplete,
+                        className: `px-8 py-3 rounded-full font-bold text-lg flex items-center gap-2 transition-all ${isComplete ? 'bg-[#b1c52b] text-white shadow-lg hover:bg-[#9db025] cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`
+                    }, nextStep === 'email' ? 'Finalizar' : 'Siguiente', nextStep === 'email' ? React.createElement(CheckCircle2, { className: "w-5 h-5" }) : React.createElement(MoveRight, { className: "w-5 h-5" }))
+                )
+            );
+        };
+
+        const EmailView = ({ email, setEmail, handleSubmit, isSubmitting, isFirebaseReady }) => (
+            React.createElement("div", { className: "max-w-md mx-auto px-4 py-12 text-center animate-fade-in" },
+                React.createElement("div", { className: "bg-white p-8 rounded-2xl shadow-xl border-t-8 border-[#fdd17c]" },
+                    React.createElement("div", { className: "mb-6 bg-[#fdd17c] bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto" }, React.createElement(Mail, { className: "w-8 h-8 text-[#d4a01c]" })),
+                    React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-2" }, "¡Tu resultado está listo!"),
+                    React.createElement("p", { className: "text-gray-600 mb-6" }, "Ingresa tu correo para ver tu biotipo."),
+                    React.createElement("form", { onSubmit: handleSubmit, className: "space-y-4" },
+                        React.createElement("input", { 
+                            type: "email", 
+                            required: true, 
+                            placeholder: "tu@email.com", 
+                            value: email, 
+                            onChange: (e) => setEmail(e.target.value), 
+                            className: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fdd17c] outline-none" 
+                        }),
+                        React.createElement("button", { type: "submit", disabled: isSubmitting, className: "w-full bg-[#b1c52b] text-white py-3 rounded-lg font-bold hover:bg-[#9db025] transition-colors flex justify-center items-center gap-2" }, isSubmitting ? "Procesando..." : "Ver Resultado")
+                    ),
+                    !isFirebaseReady && React.createElement("p", { className: "text-xs text-red-400 mt-4 bg-red-50 p-2 rounded" }, "⚠️ Modo Demo: Configura Firebase en index.html para guardar los leads.")
+                )
+            )
+        );
+
+        const ResultView = ({ results }) => {
+            if (!results) return null;
+            const { totals, finalResult } = results;
+            const maxScore = Math.max(totals.vata, totals.pitta, totals.kapha, 1);
+            
+            const Bar = ({ label, score, color, bg }) => (
+                    React.createElement("div", null,
+                    React.createElement("div", { className: "flex justify-between mb-1" }, React.createElement("span", { className: `font-bold ${color}` }, label), React.createElement("span", { className: "text-gray-600 font-mono" }, `${score} pts`)),
+                    React.createElement("div", { className: "w-full bg-gray-100 rounded-full h-4" }, React.createElement("div", { className: `${bg} h-4 rounded-full transition-all duration-1000`, style: { width: `${(score / maxScore) * 100}%` } }))
+                    )
+            );
+
+            return React.createElement("div", { className: "max-w-4xl mx-auto px-4 py-8 animate-fade-in" },
+                React.createElement("div", { className: "bg-white rounded-2xl shadow-xl overflow-hidden mb-8" },
+                    React.createElement("div", { className: "bg-[#b1c52b] p-8 text-white text-center" },
+                        React.createElement("h2", { className: "text-lg font-medium opacity-90 mb-2" }, "Tu Biotipo es:"),
+                        React.createElement("h1", { className: "text-5xl font-bold mb-4" }, finalResult.main),
+                        React.createElement("p", { className: "text-xl opacity-90" }, finalResult.desc)
+                    ),
+                    React.createElement("div", { className: "p-8 space-y-6" },
+                        React.createElement(Bar, { label: "Vata (Aire)", score: totals.vata, color: "text-blue-500", bg: "bg-blue-400" }),
+                        React.createElement(Bar, { label: "Pitta (Fuego)", score: totals.pitta, color: "text-red-500", bg: "bg-red-400" }),
+                        React.createElement(Bar, { label: "Kapha (Tierra)", score: totals.kapha, color: "text-green-600", bg: "bg-green-600" }),
+                        React.createElement("div", { className: "mt-8 text-center" },
+                            React.createElement("button", { onClick: () => window.location.reload(), className: "text-gray-400 underline hover:text-[#b1c52b] text-sm" }, "Realizar test nuevamente")
+                        )
+                    )
+                )
+            );
+        };
+
         // --- APP PRINCIPAL ---
 
         function App() {
@@ -181,7 +277,6 @@
                     const unsubscribe = onAuthStateChanged(auth, setUser);
                     return () => unsubscribe();
                 } else {
-                    // Modo offline/demo user
                     setUser({ uid: 'demo-user' });
                 }
             }, []);
@@ -191,7 +286,6 @@
             };
 
             const calculateTotal = (section) => Object.values(scores[section]).reduce((a, b) => a + b, 0);
-            const isSectionComplete = (section) => Object.keys(scores[section]).length === questionsData[section].length;
 
             const getDominantDosha = (totals) => {
                 const { vata, pitta, kapha } = totals;
@@ -227,108 +321,35 @@
                     }
                 } else {
                     console.log("Modo Demo: Resultados no guardados en BD (Falta Config).", { email, totals });
-                    await new Promise(resolve => setTimeout(resolve, 1500)); // Simular carga
+                    await new Promise(resolve => setTimeout(resolve, 1500)); 
                 }
                 
                 setIsSubmitting(false);
                 setStep('results');
             };
 
-            // VISTAS
-            const LandingView = () => (
-                React.createElement("div", { className: "flex flex-col items-center justify-center min-h-[80vh] text-center px-4 max-w-2xl mx-auto animate-fade-in" },
-                    React.createElement("div", { className: "mb-8 relative" },
-                        React.createElement("div", { className: "absolute inset-0 bg-[#fdd17c] blur-3xl opacity-20 rounded-full" }),
-                        React.createElement("img", { src: "isotiposamat.png", alt: "Sama", className: "w-32 h-32 relative z-10 animate-float", onError: (e) => { e.target.style.display='none'; document.getElementById('fallback-icon').style.display='flex'; } }),
-                        React.createElement("div", { id: "fallback-icon", className: "w-32 h-32 rounded-full border-4 border-[#b1c52b] flex items-center justify-center relative z-0", style: { display: 'none' } },
-                            React.createElement(Leaf, { className: "text-[#b1c52b] w-16 h-16" })
-                        )
-                    ),
-                    React.createElement("h2", { className: "text-4xl font-bold text-gray-800 mb-4" }, "Descubre tu Biotipo ", React.createElement("span", { className: "text-[#b1c52b]" }, "Ayurveda")),
-                    React.createElement("p", { className: "text-gray-600 text-lg mb-8 leading-relaxed" }, "El Ayurveda reconoce tres fuerzas primarias o Doshas (Vata, Pitta, Kapha). Responde este test honestamente para descubrir tu naturaleza."),
-                    React.createElement("button", {
-                        onClick: () => setStep('vata'),
-                        className: "bg-[#b1c52b] text-white px-8 py-4 rounded-full text-xl font-bold shadow-lg hover:bg-[#9db025] hover:shadow-xl transition-all transform hover:-translate-y-1 flex items-center gap-2"
-                    }, "Comenzar Test", React.createElement(ArrowRight, { className: "w-5 h-5" }))
-                )
-            );
-
-            const SectionView = ({ dosha, title, icon: Icon, colorClass, nextStep }) => {
-                const isComplete = isSectionComplete(dosha);
-                return React.createElement("div", { className: "max-w-3xl mx-auto px-4 py-8 animate-fade-in" },
-                    React.createElement("div", { className: "mb-8 flex items-center gap-4" },
-                        React.createElement("div", { className: `p-3 rounded-full ${colorClass} bg-opacity-20` }, React.createElement(Icon, { className: `w-8 h-8 ${colorClass.replace('bg-', 'text-')}` })),
-                        React.createElement("div", null, React.createElement("h2", { className: "text-2xl font-bold text-gray-800" }, `Sección ${title}`), React.createElement("p", { className: "text-sm text-gray-500" }, "Califica del 0 al 6"))
-                    ),
-                    React.createElement(ProgressBar, { current: Object.keys(scores[dosha]).length, total: 20 }),
-                    React.createElement("div", { className: "space-y-4" },
-                        questionsData[dosha].map((q, idx) => React.createElement(QuestionCard, { key: idx, index: idx, text: q, value: scores[dosha][idx], onChange: (val) => handleScoreChange(dosha, idx, val) }))
-                    ),
-                    React.createElement("div", { className: "mt-8 flex justify-end" },
-                        React.createElement("button", {
-                            onClick: () => { if (isComplete) { window.scrollTo(0,0); setStep(nextStep); } },
-                            disabled: !isComplete,
-                            className: `px-8 py-3 rounded-full font-bold text-lg flex items-center gap-2 transition-all ${isComplete ? 'bg-[#b1c52b] text-white shadow-lg hover:bg-[#9db025] cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`
-                        }, nextStep === 'email' ? 'Finalizar' : 'Siguiente', nextStep === 'email' ? React.createElement(CheckCircle2, { className: "w-5 h-5" }) : React.createElement(MoveRight, { className: "w-5 h-5" }))
-                    )
-                );
-            };
-
-            const EmailView = () => (
-                React.createElement("div", { className: "max-w-md mx-auto px-4 py-12 text-center animate-fade-in" },
-                    React.createElement("div", { className: "bg-white p-8 rounded-2xl shadow-xl border-t-8 border-[#fdd17c]" },
-                        React.createElement("div", { className: "mb-6 bg-[#fdd17c] bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto" }, React.createElement(Mail, { className: "w-8 h-8 text-[#d4a01c]" })),
-                        React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-2" }, "¡Tu resultado está listo!"),
-                        React.createElement("p", { className: "text-gray-600 mb-6" }, "Ingresa tu correo para ver tu biotipo."),
-                        React.createElement("form", { onSubmit: handleSubmit, className: "space-y-4" },
-                            React.createElement("input", { type: "email", required: true, placeholder: "tu@email.com", value: email, onChange: (e) => setEmail(e.target.value), className: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fdd17c] outline-none" }),
-                            React.createElement("button", { type: "submit", disabled: isSubmitting, className: "w-full bg-[#b1c52b] text-white py-3 rounded-lg font-bold hover:bg-[#9db025] transition-colors flex justify-center items-center gap-2" }, isSubmitting ? "Procesando..." : "Ver Resultado")
-                        ),
-                        !isFirebaseReady && React.createElement("p", { className: "text-xs text-red-400 mt-4 bg-red-50 p-2 rounded" }, "⚠️ Modo Demo: Configura Firebase en index.html para guardar los leads.")
-                    )
-                )
-            );
-
-            const ResultView = () => {
-                if (!results) return null;
-                const { totals, finalResult } = results;
-                const maxScore = Math.max(totals.vata, totals.pitta, totals.kapha, 1);
-                
-                const Bar = ({ label, score, color, bg }) => (
-                     React.createElement("div", null,
-                        React.createElement("div", { className: "flex justify-between mb-1" }, React.createElement("span", { className: `font-bold ${color}` }, label), React.createElement("span", { className: "text-gray-600 font-mono" }, `${score} pts`)),
-                        React.createElement("div", { className: "w-full bg-gray-100 rounded-full h-4" }, React.createElement("div", { className: `${bg} h-4 rounded-full transition-all duration-1000`, style: { width: `${(score / maxScore) * 100}%` } }))
-                     )
-                );
-
-                return React.createElement("div", { className: "max-w-4xl mx-auto px-4 py-8 animate-fade-in" },
-                    React.createElement("div", { className: "bg-white rounded-2xl shadow-xl overflow-hidden mb-8" },
-                        React.createElement("div", { className: "bg-[#b1c52b] p-8 text-white text-center" },
-                            React.createElement("h2", { className: "text-lg font-medium opacity-90 mb-2" }, "Tu Biotipo es:"),
-                            React.createElement("h1", { className: "text-5xl font-bold mb-4" }, finalResult.main),
-                            React.createElement("p", { className: "text-xl opacity-90" }, finalResult.desc)
-                        ),
-                        React.createElement("div", { className: "p-8 space-y-6" },
-                            React.createElement(Bar, { label: "Vata (Aire)", score: totals.vata, color: "text-blue-500", bg: "bg-blue-400" }),
-                            React.createElement(Bar, { label: "Pitta (Fuego)", score: totals.pitta, color: "text-orange-500", bg: "bg-orange-400" }),
-                            React.createElement(Bar, { label: "Kapha (Tierra)", score: totals.kapha, color: "text-green-600", bg: "bg-green-600" }),
-                            React.createElement("div", { className: "mt-8 text-center" },
-                                React.createElement("button", { onClick: () => window.location.reload(), className: "text-gray-400 underline hover:text-[#b1c52b] text-sm" }, "Realizar test nuevamente")
-                            )
-                        )
-                    )
-                );
-            };
+            const handleNext = (next) => setStep(next);
 
             return React.createElement("div", { className: "min-h-screen bg-[#fff6ea] font-sans" },
                 React.createElement(Header),
                 React.createElement("main", { className: "container mx-auto pb-20 pt-6" },
-                    step === 'landing' && React.createElement(LandingView),
-                    step === 'vata' && React.createElement(SectionView, { dosha: "vata", title: "Vata", icon: Wind, colorClass: "text-blue-400", nextStep: "pitta" }),
-                    step === 'pitta' && React.createElement(SectionView, { dosha: "pitta", title: "Pitta", icon: Flame, colorClass: "text-orange-400", nextStep: "kapha" }),
-                    step === 'kapha' && React.createElement(SectionView, { dosha: "kapha", title: "Kapha", icon: Leaf, colorClass: "text-green-600", nextStep: "email" }),
-                    step === 'email' && React.createElement(EmailView),
-                    step === 'results' && React.createElement(ResultView)
+                    step === 'landing' && React.createElement(LandingView, { onStart: () => setStep('vata') }),
+                    step === 'vata' && React.createElement(SectionView, { 
+                        dosha: "vata", title: "Vata", icon: Wind, colorClass: "text-blue-400", nextStep: "pitta",
+                        scores, onScoreChange: handleScoreChange, onNext: handleNext
+                    }),
+                    step === 'pitta' && React.createElement(SectionView, { 
+                        dosha: "pitta", title: "Pitta", icon: Flame, colorClass: "text-red-400", nextStep: "kapha",
+                        scores, onScoreChange: handleScoreChange, onNext: handleNext
+                    }),
+                    step === 'kapha' && React.createElement(SectionView, { 
+                        dosha: "kapha", title: "Kapha", icon: Leaf, colorClass: "text-green-600", nextStep: "email",
+                        scores, onScoreChange: handleScoreChange, onNext: handleNext
+                    }),
+                    step === 'email' && React.createElement(EmailView, { 
+                        email, setEmail, handleSubmit, isSubmitting, isFirebaseReady 
+                    }),
+                    step === 'results' && React.createElement(ResultView, { results })
                 )
             );
         }
