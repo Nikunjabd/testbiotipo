@@ -287,16 +287,18 @@
 
             const calculateTotal = (section) => Object.values(scores[section]).reduce((a, b) => a + b, 0);
 
-            const getDominantDosha = (totals) => {
-                const { vata, pitta, kapha } = totals;
-                const max = Math.max(vata, pitta, kapha);
+                // NUEVA LÓGICA: Tolerancia de 20 puntos
+                // Ajustado para ser más preciso: solo si está a 20 puntos o menos del líder se considera biotipo mixto.
+                const threshold = 20;
                 const dominants = [];
-                if (vata === max) dominants.push('Vata');
-                if (pitta === max) dominants.push('Pitta');
-                if (kapha === max) dominants.push('Kapha');
 
-                if (dominants.length === 3) return { type: 'Tridosha', desc: 'Equilibrio entre los tres', main: 'Vata-Pitta-Kapha' };
+                if (max - vata <= threshold) dominants.push('Vata');
+                if (max - pitta <= threshold) dominants.push('Pitta');
+                if (max - kapha <= threshold) dominants.push('Kapha');
+
+                if (dominants.length === 3) return { type: 'Tridosha', desc: 'Equilibrio entre los tres (Tridosha)', main: 'Vata-Pitta-Kapha' };
                 if (dominants.length === 2) return { type: 'Bidosha', desc: `Predominio dual de ${dominants.join(' y ')}`, main: dominants.join('-') };
+                // Si solo queda 1, es puro
                 return { type: 'Puro', desc: `Predominio claro de ${dominants[0]}`, main: dominants[0] };
             };
 
