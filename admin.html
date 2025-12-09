@@ -24,54 +24,55 @@
 
     <script type="module">
         // Importamos las herramientas necesarias
-    // Usamos direcciones web completas (CDN) para que funcione sin instalación
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // --- ⚠️ PEGA AQUÍ TU MISMA CONFIGURACIÓN (La del index.html) ⚠️ ---
-         const firebaseConfig = {
-  apiKey: "AIzaSyCFPFlpRmBcXxjNWPUuc2MKEe19Jx3qNC0",
-  authDomain: "testbiotipo.firebaseapp.com",
-  projectId: "testbiotipo",
-  storageBucket: "testbiotipo.firebasestorage.app",
-  messagingSenderId: "317910027014",
-  appId: "1:317910027014:web:1e3429835bc7f1562b6c87",
-  measurementId: "G-QLVSK0YQY7"
-};
+        // --- TU CONFIGURACIÓN ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCFPFlpRmBcXxjNWPUuc2MKEe19Jx3qNC0",
+            authDomain: "testbiotipo.firebaseapp.com",
+            projectId: "testbiotipo",
+            storageBucket: "testbiotipo.firebasestorage.app",
+            messagingSenderId: "317910027014",
+            appId: "1:317910027014:web:1e3429835bc7f1562b6c87",
+            measurementId: "G-QLVSK0YQY7"
+        };
 
         // Iniciamos Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Función para convertir datos JSON a CSV (formato Excel)
+        // --- FUNCIÓN PARA CREAR EL CSV ---
         function convertirACSV(arrayDeDatos) {
             if (arrayDeDatos.length === 0) return '';
             
-            // 1. Sacamos los encabezados (las columnas)
-            const cabeceras = Object.keys(arrayDeDatos[0]);
-            const filas = [cabeceras.join(',')]; // Primera fila: Títulos
+            // 1. TUS COLUMNAS VIP 
+            // Aquí ponemos el nombre del DATO que quieres sacar
+            const columnasDeseadas = ["email", "resultType"]; 
 
-            // 2. Recorremos cada paciente y lo convertimos a texto
+            // Títulos de la primera fila
+            const filas = [columnasDeseadas.join(',')]; 
+
+            // 2. Rellenamos los datos
             arrayDeDatos.forEach(obj => {
-                const valores = cabeceras.map(cabecera => {
-                    let valor = obj[cabecera] || ''; // Si está vacío, poner nada
-                    return `"${valor}"`; // Ponemos comillas por si el texto tiene comas
+                const valores = columnasDeseadas.map(columna => {
+                    let valor = obj[columna] || ''; 
+                    return `"${valor}"`; 
                 });
                 filas.push(valores.join(','));
             });
 
-            return filas.join('\n'); // Unimos todo con saltos de línea
+            return filas.join('\n'); 
         }
 
-        // Lógica del Botón
+        // --- LÓGICA DEL BOTÓN ---
         document.getElementById('btnDescargar').addEventListener('click', async () => {
             const msj = document.getElementById('mensaje');
             msj.textContent = "⏳ Conectando con la base de datos...";
             msj.className = "mt-4 text-sm text-blue-600";
 
             try {
-                // 1. Pedimos los documentos a la colección (Asegúrate que el nombre coincida con el que usaste)
-                // Si tu colección se llama distinto de 'usuarios', cámbialo aquí abajo 👇
+                // ⚠️ AQUÍ BUSCAMOS EN LA CARPETA "leads_dosha"
                 const querySnapshot = await getDocs(collection(db, "leads_dosha"));
                 
                 const listaPacientes = [];
@@ -80,39 +81,19 @@ import { getFirestore, collection, getDocs } from "https://www.gstatic.com/fireb
                 });
 
                 if (listaPacientes.length === 0) {
-                    msj.textContent = "⚠️ La base de datos está vacía o no se pudo leer.";
+                    msj.textContent = "⚠️ Conectado a 'leads_dosha', pero la carpeta está vacía.";
                     return;
                 }
 
-               // Función para convertir datos JSON a CSV (formato Excel)
-        function convertirACSV(arrayDeDatos) {
-            if (arrayDeDatos.length === 0) return '';
-            
-            // 1. DEFINIMOS TU LISTA VIP (Aquí eliges las columnas)
-            // Asegúrate de que los nombres sean IGUALES a como aparecen en tu base de datos
-            const columnasDeseadas = ["email", "resultType"]; 
+                // Generamos el CSV
+                const csvContent = convertirACSV(listaPacientes);
 
-            // Creamos la primera fila con los títulos
-            const filas = [columnasDeseadas.join(',')]; 
-
-            // 2. Recorremos cada paciente y sacamos SOLO lo que pediste
-            arrayDeDatos.forEach(obj => {
-                const valores = columnasDeseadas.map(columna => {
-                    let valor = obj[columna] || ''; // Si está vacío, poner nada
-                    return `"${valor}"`; // Ponemos comillas por seguridad
-                });
-                filas.push(valores.join(','));
-            });
-
-            return filas.join('\n'); // Unimos todo
-        }
-
-                // 3. Crear un enlace invisible para descargar el archivo
+                // Descargamos
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.setAttribute("href", url);
-                link.setAttribute("download", "bd_test_biotipo.csv");
+                link.setAttribute("download", "pacientes_leads_dosha.csv");
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
@@ -122,7 +103,7 @@ import { getFirestore, collection, getDocs } from "https://www.gstatic.com/fireb
                 msj.className = "mt-4 text-sm text-green-600 font-bold";
 
             } catch (error) {
-                console.error("Error:", error);
+                console.error("Error completo:", error);
                 msj.textContent = "❌ Error: " + error.message;
                 msj.className = "mt-4 text-sm text-red-600";
             }
